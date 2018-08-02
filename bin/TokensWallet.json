@@ -1,0 +1,26 @@
+{
+    "abi": "[{\"constant\":false,\"inputs\":[{\"name\":\"cost\",\"type\":\"uint256\"}],\"name\":\"getMoney\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"isExists\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"isFull\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"cost\",\"type\":\"uint256\"}],\"name\":\"setMoney\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"transferOwnership\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"}]",
+    "bytecode": "608060405234801561001057600080fd5b5060008054600160a060020a03191633179055624c4b40600155610283806100396000396000f30060806040526004361061006c5763ffffffff7c01000000000000000000000000000000000000000000000000000000006000350416633262fd9a81146100715780637b0893b51461009b578063babd3d9a146100c4578063c3230d0d146100d9578063f2fde38b146100f1575b600080fd5b34801561007d57600080fd5b50610089600435610121565b60408051918252519081900360200190f35b3480156100a757600080fd5b506100b0610175565b604080519115158252519081900360200190f35b3480156100d057600080fd5b506100b061017e565b3480156100e557600080fd5b50610089600435610189565b3480156100fd57600080fd5b5061011f73ffffffffffffffffffffffffffffffffffffffff600435166101de565b005b60008054819073ffffffffffffffffffffffffffffffffffffffff16331461014857600080fd5b60015483116101625750600180548390039055600061016f565b5060018054600090915582035b92915050565b60015460001090565b600154624c4b401190565b60008054819073ffffffffffffffffffffffffffffffffffffffff1633146101b057600080fd5b506001548201624c4b408111156101d357624c4b40600155624c4b3f190161016f565b600155506000919050565b60005473ffffffffffffffffffffffffffffffffffffffff16331461020257600080fd5b73ffffffffffffffffffffffffffffffffffffffff811615610254576000805473ffffffffffffffffffffffffffffffffffffffff191673ffffffffffffffffffffffffffffffffffffffff83161790555b505600a165627a7a72305820ac2df18ced54afb4f15aeb6a54dd941339fbced46fa861e960714ff7722285490029",
+    "functionHashes": {
+        "getMoney(uint256)": "3262fd9a",
+        "isExists()": "7b0893b5",
+        "isFull()": "babd3d9a",
+        "setMoney(uint256)": "c3230d0d",
+        "transferOwnership(address)": "f2fde38b"
+    },
+    "gasEstimates": {
+        "creation": [
+            40475,
+            128600
+        ],
+        "external": {
+            "getMoney(uint256)": 20888,
+            "isExists()": 418,
+            "isFull()": 440,
+            "setMoney(uint256)": 20760,
+            "transferOwnership(address)": 20716
+        },
+        "internal": {}
+    },
+    "runtimeBytecode": "60806040526004361061006c5763ffffffff7c01000000000000000000000000000000000000000000000000000000006000350416633262fd9a81146100715780637b0893b51461009b578063babd3d9a146100c4578063c3230d0d146100d9578063f2fde38b146100f1575b600080fd5b34801561007d57600080fd5b50610089600435610121565b60408051918252519081900360200190f35b3480156100a757600080fd5b506100b0610175565b604080519115158252519081900360200190f35b3480156100d057600080fd5b506100b061017e565b3480156100e557600080fd5b50610089600435610189565b3480156100fd57600080fd5b5061011f73ffffffffffffffffffffffffffffffffffffffff600435166101de565b005b60008054819073ffffffffffffffffffffffffffffffffffffffff16331461014857600080fd5b60015483116101625750600180548390039055600061016f565b5060018054600090915582035b92915050565b60015460001090565b600154624c4b401190565b60008054819073ffffffffffffffffffffffffffffffffffffffff1633146101b057600080fd5b506001548201624c4b408111156101d357624c4b40600155624c4b3f190161016f565b600155506000919050565b60005473ffffffffffffffffffffffffffffffffffffffff16331461020257600080fd5b73ffffffffffffffffffffffffffffffffffffffff811615610254576000805473ffffffffffffffffffffffffffffffffffffffff191673ffffffffffffffffffffffffffffffffffffffff83161790555b505600a165627a7a72305820ac2df18ced54afb4f15aeb6a54dd941339fbced46fa861e960714ff7722285490029"
+}
