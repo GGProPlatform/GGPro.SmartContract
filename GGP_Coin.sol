@@ -1,4 +1,4 @@
-pragma solidity 0.4.24;
+pragma solidity ^0.4.24;
 
 /**
  * @dev Математические операции, с проверками безопасности
@@ -200,8 +200,8 @@ contract Team is Ownable {
         прописывает нулевой адрес, как адрес подписывателя
      */
     constructor() public {
-        //Инициализируем массив адресов на 20 позиций
-        teamAccountsArray = new address[] (20);
+        //Инициализируем массив адресов на 10 позиций
+        teamAccountsArray = new address[] (10);
         //Запрещаем переводы токенов, с командных счетов
         allowTeamTransfer = false;
         //Инициализируем количество командных кошельков
@@ -214,8 +214,8 @@ contract Team is Ownable {
      */
     function addTeamAccount(address newAccount) public onlyOwner {
         //Если переданный адрес существует, не находится в нашем списке
-        //и количество членов команды меньше 20
-        if((newAccount != address(0)) && !isTeam(newAccount) && (teamSetCount < 20)) {
+        //и количество членов команды меньше 10
+        if((newAccount != address(0)) && !isTeam(newAccount) && (teamSetCount < 10)) {
             //Записываем в общий список кошелёк
             teamAccounts[newAccount] = 31337;
             //Записываем адрес кошелька в массив
@@ -593,7 +593,8 @@ contract TokensWallet is Ownable {
      */
     constructor() public {
         //Инициализация кошелька суммой в 5 000 000 токенов
-        balance = 5000000;
+        //добавить 5 нолей, т.к. у нас пять знаков после запятой
+        balance = 500000000000;
     }
 
     /**
@@ -608,7 +609,8 @@ contract TokensWallet is Ownable {
      */
     function isFull() public view returns(bool) {
         //Если баланс ниже максимума
-        return (balance < 5000000);
+        //добавить 5 нолей, т.к. у нас пять знаков после запятой
+        return (balance < 500000000000);
     }
 
 
@@ -622,12 +624,12 @@ contract TokensWallet is Ownable {
         uint remainder = balance + cost;
         
         //Если сумма платежа больше вместимости
-        if(remainder > 5000000)
+        if(remainder > 500000000000)
         {
             //Считаем остаток
-            remainder -= 5000000;
+            remainder -= 500000000000;
             //Ставим баланс на максимум
-            balance = 5000000;
+            balance = 500000000000;
         //В противном случае
         } else {
             //Присваиваем новый баланс 
@@ -741,7 +743,8 @@ contract MintableToken is StandardToken, Ownable, Signatory, RefundTokens {
         teamFlag = true;
         //Указываем общую сумму токенов, которые 
         //будут участвовать в обороте
-        totalSupply = 100000000;
+        //добавить 5 нолей, т.к. у нас пять знаков после запятой
+        totalSupply = 10000000000000;
         //Инициализируем все внутренние кошельки с токенами
         //1 кошелёк - 5млн токенов, значит у нас будет
         //20 отдельных кошельков.
