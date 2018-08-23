@@ -580,8 +580,7 @@ contract StandardToken is BasicToken, ERC20 {
 }
 
 /**
-    @dev контракт, реализующий один из мини-кошельков, 
-    на которых хранятся токены
+    @dev контракт, реализующий кошелёк контракта, на котором хранятся токены
  */
 contract TokensWallet is Ownable {
     //Баланс данного кошелька
@@ -590,55 +589,21 @@ contract TokensWallet is Ownable {
     /**
         @dev Конструктор инициализирует данный кошелёк, 
         с фиксированной суммой.
+		@param _balance - общее количество токенов, которое нужно создать
      */
-    constructor() public {
-        //Инициализация кошелька суммой в 5 000 000 токенов
-        //добавить 5 нолей, т.к. у нас пять знаков после запятой
-        balance = 500000000000;
+    constructor(uint _balance) public {
+        //Инициализация кошелька нужной суммой
+        balance = _balance;
     }
-
-    /**
-        @dev проверяет наличие средств на кошельке
-     */
-    function isExists() public view returns(bool) {
-        return (balance > 0);
-    }
-
-    /**
-        @dev проверяет, что кошелёк не полон
-     */
-    function isFull() public view returns(bool) {
-        //Если баланс ниже максимума
-        //добавить 5 нолей, т.к. у нас пять знаков после запятой
-        return (balance < 500000000000);
-    }
-
 
     /**
         @dev Вкладываем средства в кошель
         @param cost - сумма, которую возвращаем
         @return - часть суммы, на которую не хватило максимальной вместимости кошелька
      */
-    function setMoney(uint cost) public onlyOwner returns(uint) {
-        //Получаем сумму, которая будет при вкладывании в кошель средств
-        uint remainder = balance + cost;
-        
-        //Если сумма платежа больше вместимости
-        if(remainder > 500000000000)
-        {
-            //Считаем остаток
-            remainder -= 500000000000;
-            //Ставим баланс на максимум
-            balance = 500000000000;
-        //В противном случае
-        } else {
-            //Присваиваем новый баланс 
-            balance = remainder;
-            //И ставим остаток в 0
-            remainder = 0;
-        }
-
-        return remainder;
+    function setMoney(uint cost) public onlyOwner {
+        //Кладём сумму на кошелёк
+        balance += cost;
     }
 
     /**
@@ -666,6 +631,14 @@ contract TokensWallet is Ownable {
 
         return remainder;
     }
+	
+	/**
+		@dev возвращаем сумму баланса кошелька
+        @return - Сумма блаанса на кошкльке		
+	*/
+    function getWalletBalance() public view returns(uint) {
+        return balance;
+    }
 }
 
 
@@ -691,8 +664,6 @@ contract MintableToken is StandardToken, Ownable, Signatory, RefundTokens {
     
     //Общий запас токенов
     uint public totalSupply;    
-    //Общее количество кошельков
-    uint private walletsCount;  
     //Флаг, разрешающий раздачу токенов команде
     bool private teamFlag;
     //Указываем, сколько токенов пойдёт на один командный кошелёк
@@ -700,8 +671,8 @@ contract MintableToken is StandardToken, Ownable, Signatory, RefundTokens {
     //Флаг, показывающий, что работа смартконтракта была запущена
     bool public work;
 
-    //Кошельки, на которых хранится запас уже напечатанных токенов
-    TokensWallet[] private wallets;
+    //Кошель, на котором хранится запас уже напечатанных токенов
+    TokensWallet private wallet;
 
     //Список транзакций, по переводу токенов из кошельков
     mapping(bytes32 => Transaction) private transactions;
@@ -745,26 +716,24 @@ contract MintableToken is StandardToken, Ownable, Signatory, RefundTokens {
         //будут участвовать в обороте
         //добавить 5 нолей, т.к. у нас пять знаков после запятой
         totalSupply = 10000000000000;
-        //Инициализируем все внутренние кошельки с токенами
-        //1 кошелёк - 5млн токенов, значит у нас будет
-        //20 отдельных кошельков.
-        //Указываем, сколько у нас кошельков
-        walletsCount = 20;
-        //Инициализируем массив кошельков
-        wallets = new TokensWallet[] (walletsCount);
-        //Инициализируем кажыдй из них
-        for(uint i = 0; i < walletsCount; i++) {
-            //Инициализируем кошелёк
-            wallets[i] = new TokensWallet();
-        }
+        //Инициализируем внутренний кошелёк с токенами
+        wallet = new TokensWallet(totalSupply);
         //Указываем, сколько токенов пойдёт на один
         //командный адрес. Команде отходит 20% 
         //от общего количества токенов. 
         //Всего командных кошельков - 20. Таком образом,
         //на один командный адрес пойдёт: 
         //(100`000`000 * 0,2) / 20 = 1 000 000 токенов        
-        teamWalletTokens = 1000000;
+        teamWalletTokens = 100000000000;
     }    
+
+	/**
+		@dev возвращаем сумму баланса кошелька
+        @return - Сумма блаанса на кошкльке		
+	*/
+    function getWalletBalance() public view returns(uint) {
+        return wallet.getWalletBalance();
+    }
 
     /**
         @dev Снимаем указанную сумму, с кошельков
@@ -773,28 +742,11 @@ contract MintableToken is StandardToken, Ownable, Signatory, RefundTokens {
      */
     function removeTokens(uint cost) internal isOwnerOrSigner returns(uint) {
         //Указываем всю сумму, как остаток по дефолту
-        uint remainder = cost;
-        //Выбираемнулевой кошелёк
-        uint selectWallet = 0;  
-
-        //Цикл, идущий до тех пор, пока мы не выкачаем из кошельков 
-        //нужную сумму, либо, пока у нас не закончатся кошельки
-        while((remainder > 0) && (selectWallet < walletsCount)) {
-            //Если на проверяемом кошельке есть токены
-            if(wallets[selectWallet].isExists()) {
-                //Снимаем сумму с кошелька, и получаем неснятую 
-                //часть суммы (если на кошельке не хватило средств)
-                remainder = wallets[selectWallet].getMoney(remainder);
-                //Если мы сняли не всё
-                if(remainder > 0) {
-                    //Переходим к следующему кошельку
-                    selectWallet++;
-                }
-            } else {
-                //Переходим к следующему кошельку
-                selectWallet++;
-            }
-        }
+        uint remainder = cost;        
+        
+        //Снимаем сумму с кошелька, и получаем неснятую 
+        //часть суммы (если на кошельке не хватило средств)
+        remainder = wallet.getMoney(remainder);
 
         //Если на кошельках не хватило средств, остаток мы 
         //вернём, в виде возвращаемого значения
@@ -806,31 +758,8 @@ contract MintableToken is StandardToken, Ownable, Signatory, RefundTokens {
         @param cost - количество возвращаемых токенов
      */
     function returnTokens(uint cost) internal onlyOwner isWork {
-        //Указываем всю сумму, как остаток по дефолту
-        uint remainder = cost;
-        //Выбираемнулевой кошелёк
-        uint selectWallet = 0;  
-        
-        //Цикл, идущий до тех пор, пока мы не вернём в кошельки 
-        //нужную сумму, либо, пока у нас не закончатся кошельки
-        //Но это невозможно - количество токенов, курсирующих в 
-        //сети равно общей вместимости кошельков. 
-        while((remainder > 0) && (selectWallet < walletsCount)) {
-            //Если в проверяемом кошельке есть место
-            if(!wallets[selectWallet].isFull()) {
-                //Запихиваем токены в кошелёк, и получаем количество
-                //токенов, которые в него не вместились
-                remainder = wallets[selectWallet].setMoney(remainder);
-                //Если мы скинули не всё
-                if(remainder > 0) {
-                    //Переходим к следующему кошельку
-                    selectWallet++;
-                }
-            } else {
-                //Переходим к следующему кошельку
-                selectWallet++;
-            }
-        }
+        //Отправляем бабки на кошелёк
+        wallet.setMoney(cost);
     }
 
     /**
@@ -1130,14 +1059,27 @@ contract MainSale is Ownable {
     //Экземпляр контракта токена
     GGPCoin public token;
 
+    
     /**
-        @dev Конструктор главного рабочего контракта
+        @dev модификатор, позволяющий запускать функции 
+        только до того как токен будет создан
      */
-    constructor() public {
+    modifier onlyWithoutToken() {
+        //Проверка того, что токена нету
+        require(token == address(0));
+        //Вызов основной функции
+        _;
+    }
+
+    
+
+    /**
+        @dev Инициализацйия токена
+     */
+    function initToken() public onlyOwner onlyWithoutToken {
         //Инициализируем токен
         token = new GGPCoin();
         //Передаём управление токеном владельцу данного контракта
         token.transferOwnership(msg.sender);
-    }
-
+    }    
 }
