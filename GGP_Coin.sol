@@ -1,4 +1,5 @@
-pragma solidity 0.4.24;
+//solium-disable linebreak-style
+pragma solidity ^0.4.24;
 
 /**
  * @dev Математические операции, с проверками безопасности
@@ -85,13 +86,16 @@ contract Ownable {
     //Адрес владельца контракта
     address private owner;
 
+    //Событие, которое вызывается при 
+    event NewOwnerEvent(address indexed newOwner);
+
     /**
         @dev модификатор, позволяющий запускать функции 
         только владельцу контракта
      */
     modifier onlyOwner() {
         //Проверка того, что запускающий является владельцем
-        require(msg.sender == owner);
+        require(msg.sender == owner, "Sender is not owner");
         //Вызов основной функции
         _;
     }
@@ -115,6 +119,8 @@ contract Ownable {
         if(newOwner != address(0)) {
             //Меняем владельца
             owner = newOwner;
+            //Вызываем событие
+            emit NewOwnerEvent(owner);
         }
     }
 
@@ -137,13 +143,16 @@ contract Signatory is Ownable {
 
     //Адрес подписывателя
     address private signer;
+    
+    //Событие, которое вызывается при 
+    event NewSignerEvent(address indexed newOwner);
 
     /**
         @dev модификатор, позволяющий вызов функции только
         для подписывателя транзакций.
      */
     modifier onlySigner() {
-        require(msg.sender == signer);
+        require(msg.sender == signer, "Sender is not signer");
         _;
     }
 
@@ -165,6 +174,8 @@ contract Signatory is Ownable {
         if(newSigner != address(0)) {
             //Меняем подписывателя
             signer = newSigner;
+            //Вызываем событие
+            emit NewSignerEvent(signer);
         }
     }
 
@@ -194,6 +205,8 @@ contract Team is Ownable {
     //Флаг разрешающий переводы, для команды 
     bool private allowTeamTransfer;
 
+    //Событие, которое вызывается при приявзке кошельков команды
+    event SetTeamWalletsEvent(address[] teamWallets);
 
     /**
         @dev Конструктор контракта. При инициализации контракта,
@@ -215,18 +228,32 @@ contract Team is Ownable {
     function addTeamAccount(address newAccount) public onlyOwner {
         //Если переданный адрес существует, не находится в нашем списке
         //и количество членов команды меньше 10
-        if((newAccount != address(0)) && !isTeam(newAccount) && (teamSetCount < 10)) {
-            //Записываем в общий список кошелёк
-            teamAccounts[newAccount] = 31337;
-            //Записываем адрес кошелька в массив
-            teamAccountsArray[teamSetCount] = newAccount;      
-            //Увеличиваем счётчик количества командных аккаунтов
-            teamSetCount++;      
-        } else {
-            //Иначе - вызываем ошибку выполнения
-            require(false);
-        }
+        require((newAccount != address(0)) && !isTeam(newAccount) && (teamSetCount < 10), "Error add team account");
+
+        //Записываем в общий список кошелёк
+        teamAccounts[newAccount] = 31337;
+        //Записываем адрес кошелька в массив
+        teamAccountsArray[teamSetCount] = newAccount;      
+        //Увеличиваем счётчик количества командных аккаунтов
+        teamSetCount++;      
     }
+
+    /**
+        @dev Функция добавляющая массив командных кошельков
+        @param newAccounts - массив адресов новых кошельков
+    */
+    function addTeamAccounts(address[] newAccounts) public onlyOwner {        
+        //Вываливаем ошибку, если количество аккаунтов некорректно
+        require(newAccounts.length != 10, "Need 10 accounts in array");
+        //Проходимся по массиву аккаунтов
+        for(uint256 i = 0; i < 10; i++) {
+            //Добавляем аккаунты
+            addTeamAccount(newAccounts[i]);
+        }
+        //Вызываем ивент обновления списка командных аккаунтов
+        emit SetTeamWalletsEvent(newAccounts);
+    }
+    
 
     /**
         @dev проверка того, что указанный аккаунт относится к командным
@@ -286,6 +313,9 @@ contract RefundTokens is Ownable {
     //Адрес возврата
     address private refund;    
 
+    //Событие, которое вызывается при изменении адреса возврата токенов
+    event SetNewRefundAddressEvent(address indexed refundAddress);
+
     //Информация о возврате. Представляет из себя список, в котором
     //Каждому адресу ассоциирован массив элементов, с информацией об 
     //одной операции возврата.
@@ -307,8 +337,10 @@ contract RefundTokens is Ownable {
     function setRefund(address newRefund) public onlyOwner {
           //Если переданный адрес существует
         if(newRefund != address(0)) {
-            //Меняем подписывателя
+            //Меняем адрес возврата
             refund = newRefund;
+            //Ивент события смены адреса возврата
+            emit SetNewRefundAddressEvent(refund);
         }
     }
 
@@ -419,7 +451,7 @@ contract BasicToken is ERC20Basic {
         @param size - сверяемый размер
     */
     modifier onlyPayloadSize(uint size) {
-        require(msg.data.length >= size + 4);
+        require(msg.data.length >= size + 4, "Error: data size is too small");
         _;
     }
 
@@ -430,17 +462,14 @@ contract BasicToken is ERC20Basic {
     */
     function transfer(address _to, uint _value) public onlyPayloadSize(2 * 32) {     
         //Если на счету отправителя есть необходимая сумма
-        if(balances[msg.sender] >= _value) {
-            //Снимаем с баланса отправляющего сумму платежа
-            balances[msg.sender] = balances[msg.sender].sub(_value);
-            //Прибавляем к балансу получателя сумму платежа
-            balances[_to] = balances[_to].add(_value);
-            //Вызываем событие, уведомляющее об отправке платежа
-            emit Transfer(msg.sender, _to, _value);
-        } else {
-            //В противном случае - вызываем ошибку
-            require(false);
-        }
+        require(balances[msg.sender] >= _value, "There is not enough money on the balance");
+
+        //Снимаем с баланса отправляющего сумму платежа
+        balances[msg.sender] = balances[msg.sender].sub(_value);
+        //Прибавляем к балансу получателя сумму платежа
+        balances[_to] = balances[_to].add(_value);
+        //Вызываем событие, уведомляющее об отправке платежа
+        emit Transfer(msg.sender, _to, _value);       
     }
 
     /**
@@ -450,16 +479,14 @@ contract BasicToken is ERC20Basic {
     */
     function remove(address _to, uint _value) internal onlyPayloadSize(2 * 32) {     
         //Если на счету отправителя есть необходимая сумма
-        if(balances[msg.sender] >= _value) {
-            //Снимаем с баланса отправляющего сумму платежа
-            balances[msg.sender] = balances[msg.sender].sub(_value);
-            //Вызываем событие, уведомляющее об отправке платежа
-            emit Transfer(msg.sender, _to, _value);
-        } else {
-            //В противном случае - вызываем ошибку
-            require(false);
-        }
+        require(balances[msg.sender] >= _value, "There is not enough money on the balance");
+
+        //Снимаем с баланса отправляющего сумму платежа
+        balances[msg.sender] = balances[msg.sender].sub(_value);
+        //Вызываем событие, уведомляющее об отправке платежа
+        emit Transfer(msg.sender, _to, _value);       
     }
+
     /**
     * @dev Получаем баланс, указанного адреса
     * @param _owner Адрес, чей баланс узнаём. 
@@ -504,19 +531,16 @@ contract StandardToken is BasicToken, ERC20 {
         uint _allowance = allowed[_from][msg.sender];
         //Если на счету, разрешённом к взаимодействию, 
         //есть указанная сумма
-        if(_allowance >= _value) {
-            // Уменьшаем сумму, которую вы можем снять от лица отправителя с баланса отпарляющего
-            allowed[_from][msg.sender] = _allowance.sub(_value);
-            // Уменьшаем баланс отправляющего
-            balances[_from] = balances[_from].sub(_value);
-            // Увеличиваем баланс принимающего
-            balances[_to] = balances[_to].add(_value);
-            // Вызываем ивент отправки средств
-            emit Transfer(_from, _to, _value);
-        } else {
-            //В противном случае возвращаем ошибку
-            require(false);
-        }
+        require(_allowance >= _value, "The allowed amount is insufficient for this transaction");
+
+        // Уменьшаем сумму, которую вы можем снять от лица отправителя с баланса отпарляющего
+        allowed[_from][msg.sender] = _allowance.sub(_value);
+        // Уменьшаем баланс отправляющего
+        balances[_from] = balances[_from].sub(_value);
+        // Увеличиваем баланс принимающего
+        balances[_to] = balances[_to].add(_value);
+        // Вызываем ивент отправки средств
+        emit Transfer(_from, _to, _value);        
     }
 
 
@@ -532,17 +556,14 @@ contract StandardToken is BasicToken, ERC20 {
         uint _allowance = allowed[_from][msg.sender];
         //Если на счету, разрешённом к взаимодействию, 
         //есть указанная сумма
-        if(_allowance >= _value) {
-            // Уменьшаем сумму, которую вы можем снять от лица отправителя с баланса отпарляющего
-            allowed[_from][msg.sender] = _allowance.sub(_value);
-            // Уменьшаем баланс отправляющего
-            balances[_from] = balances[_from].sub(_value);
-            // Вызываем ивент отправки средств
-            emit Transfer(_from, _to, _value);
-        } else {
-            //В противном случае возвращаем ошибку
-            require(false);
-        }
+        require(_allowance >= _value, "The allowed amount is insufficient for this transaction");
+
+        // Уменьшаем сумму, которую вы можем снять от лица отправителя с баланса отпарляющего
+        allowed[_from][msg.sender] = _allowance.sub(_value);
+        // Уменьшаем баланс отправляющего
+        balances[_from] = balances[_from].sub(_value);
+        // Вызываем ивент отправки средств
+        emit Transfer(_from, _to, _value);       
     }
 
     /**
@@ -557,9 +578,8 @@ contract StandardToken is BasicToken, ERC20 {
         // количество адресов до 0, вызвав `approve(_spender, 0)`, если только оно
         // уже не равно нулю, чтобы смягчить условия гонки, описанной здесь:
         //  https://github.com/ethereum/EIPs/issues/20#issuecomment-263524729
-        if ((_value != 0) && (allowed[msg.sender][_spender] != 0)) 
-            require(false); //Решение кривое, но мне влом щас думать, как переписать это условие на обратное
-
+        require ((_value == 0) || (allowed[msg.sender][_spender] == 0), "First you need to reduce the allowed amount to 0");
+        
         // Устанавливаем сумму токенов, которую данный адрес может переслать другому,
         // от лица вызыввшего функцию
         allowed[msg.sender][_spender] = _value;
@@ -586,6 +606,9 @@ contract TokensWallet is Ownable {
     //Баланс данного кошелька
     uint private balance;
 
+    //Событие, которое вызывается при инициализации кошелька токена
+    event SetTokensCountEvent(uint balance);
+
     /**
         @dev Конструктор инициализирует данный кошелёк, 
         с фиксированной суммой.
@@ -594,6 +617,8 @@ contract TokensWallet is Ownable {
     constructor(uint _balance) public {
         //Инициализация кошелька нужной суммой
         balance = _balance;
+        //Вызываем ивент обновления баланса
+        emit SetTokensCountEvent(_balance);
     }
 
     /**
@@ -673,6 +698,9 @@ contract MintableToken is StandardToken, Ownable, Signatory, RefundTokens {
 
     //Кошель, на котором хранится запас уже напечатанных токенов
     TokensWallet private wallet;
+   
+    //Событие, которое вызывается при раздаче токенов команде
+    event DistrubToTeamEvent();
 
     //Список транзакций, по переводу токенов из кошельков
     mapping(bytes32 => Transaction) private transactions;
@@ -682,7 +710,7 @@ contract MintableToken is StandardToken, Ownable, Signatory, RefundTokens {
         до начала работы контракта 
      */
     modifier isWork() {
-        require(work);
+        require(work, "Work is not started");
         _;
     }
 
@@ -691,7 +719,7 @@ contract MintableToken is StandardToken, Ownable, Signatory, RefundTokens {
         после начала работы контракта 
      */
     modifier isNotWork() {
-        require(!work);
+        require(!work, "Work is started");
         _;
     }
 
@@ -700,7 +728,7 @@ contract MintableToken is StandardToken, Ownable, Signatory, RefundTokens {
         если вызывающий не создатель ИЛИ подписыватель
      */
     modifier isOwnerOrSigner() {
-        require(isOwner(msg.sender) || isSigner(msg.sender));
+        require(isOwner(msg.sender) || isSigner(msg.sender), "Sender is not owner or signer");
         _;
     }
     /**
@@ -768,18 +796,17 @@ contract MintableToken is StandardToken, Ownable, Signatory, RefundTokens {
      */
     function setTeamTokens(address[] teamAccounts) internal onlyOwner isNotWork {
         //Если раздача токенов команде разрешена
-        if(teamFlag == true) {            
-            //Проходимся, по полученному списку аккаунтов
-            for (uint i = 0; i < teamAccounts.length; i++) {
-                //Отправляем токены на кошелёк
-                sentTeamTokens(teamAccounts[i]);
-            }
-            //Запрещаем дальнейшую раздачу токенов команде
-            teamFlag = false;
-        } else {
-            //В противном случае выдаём ошибку
-            require(false);
+        require(teamFlag, "Distribution team tokens is not allow");        
+
+        //Проходимся, по полученному списку аккаунтов
+        for (uint i = 0; i < teamAccounts.length; i++) {
+            //Отправляем токены на кошелёк
+            sentTeamTokens(teamAccounts[i]);
         }
+        //Запрещаем дальнейшую раздачу токенов команде
+        teamFlag = false;
+        //Вызываем ивент о раздаче командных токенов
+        emit DistrubToTeamEvent();
     }
 
     /**
@@ -794,6 +821,9 @@ contract MintableToken is StandardToken, Ownable, Signatory, RefundTokens {
         removeTokens(teamWalletTokens);
         //Прибавляем к балансу получателя сумму платежа
         balances[_to] = balances[_to].add(teamWalletTokens);
+        
+        // Вызываем ивент отправки средств
+        emit Transfer(address(this), _to, teamWalletTokens);
     }
 
     /**
@@ -852,6 +882,8 @@ contract MintableToken is StandardToken, Ownable, Signatory, RefundTokens {
         transactions[id].cost -= remainder;
         //Прибавляем к балансу получателя сумму платежа
         balances[transactions[id]._to] = balances[transactions[id]._to].add(transactions[id].cost);
+        // Вызываем ивент отправки средств
+        emit Transfer(address(this), transactions[id]._to, transactions[id].cost);
         //Возвращаем остаток
         return remainder;
     }
@@ -878,6 +910,15 @@ contract GGPCoin is MintableToken {
     //Флаг, показывающий, что разрешение на выполнение 
     //транзакций ждёт только подписи
     bool private allowTransfersWaitSign;
+
+
+    //Событие, которое вызывается при запуске работы токена
+    event StartWorkEvent(uint startTime);
+    //Событие, которое вызывается при разрешении транзакций
+    event AllowTransactionsEvent();
+    //Событие, которое вызывается при разрешении транзакций
+    //для командных аккаунтов
+    event AllowTeamTransactionsEvent();
 
     /**
         @dev Конструктор основного контракта токена
@@ -916,23 +957,19 @@ contract GGPCoin is MintableToken {
     */
     function transfer(address _to, uint _value) public isWork {         
         //проверяем, разрешён ли перевод, для данного адреса
-        if (isAllowTransfer(msg.sender)) {
-            //Если адрес получателя - это адрес возврата токенов
-            if(isRefund(_to)) {
-                //Добавляем данную транзакцию, в список возвратов
-                addRefund(msg.sender, _value);
-                //Списываем бабки со счёта отправителя
-                remove(_to, _value);
-            //Если адрес получателя другой
-            } else {
-                //Вызывает функцию transfer от basicToken. По сути у нас получилась обёртка.
-                super.transfer(_to, _value);        
-            }
-            
+        require (isAllowTransfer(msg.sender), "Transfer is not allow");
+        
+        //Если адрес получателя - это адрес возврата токенов
+        if(isRefund(_to)) {
+            //Добавляем данную транзакцию, в список возвратов
+            addRefund(msg.sender, _value);
+            //Списываем бабки со счёта отправителя
+            remove(_to, _value);
+        //Если адрес получателя другой
         } else {
-            //В противном случае - возвращаем ошибку
-            require(false);
-        }
+            //Вызывает функцию transfer от basicToken. По сути у нас получилась обёртка.
+            super.transfer(_to, _value);        
+        }            
     }
 
     /**
@@ -943,22 +980,19 @@ contract GGPCoin is MintableToken {
     */
     function transferFrom(address _from, address _to, uint _value) public isWork { 
         //проверяем, разрешён ли перевод, для данного адреса
-        if (isAllowTransfer(msg.sender)) {
-            //Если адрес получателя - это адрес возврата токенов
-            if(isRefund(_to)) {
-                //Добавляем данную транзакцию, в список возвратов
-                addRefund(msg.sender, _value);     
-                //Снимаем бабки со счёта отправителя
-                removeFrom(_from, _to, _value);
-            //Если адрес получателя другой
-            } else {
-                //Вызывает функцию transferFrom от StandardToken (как я понял). По сути у нас получилась обёртка.
-                super.transferFrom(_from, _to, _value);    
-            } 
+        require (isAllowTransfer(msg.sender), "Transfer is not allow");
+
+        //Если адрес получателя - это адрес возврата токенов
+        if(isRefund(_to)) {
+            //Добавляем данную транзакцию, в список возвратов
+            addRefund(msg.sender, _value);     
+            //Снимаем бабки со счёта отправителя
+            removeFrom(_from, _to, _value);
+        //Если адрес получателя другой
         } else {
-            //В противном случае - возвращаем ошибку
-            require(false);
-        }
+            //Вызывает функцию transferFrom от StandardToken (как я понял). По сути у нас получилась обёртка.
+            super.transferFrom(_from, _to, _value);    
+        } 
     }    
 
     
@@ -974,11 +1008,20 @@ contract GGPCoin is MintableToken {
 
     /**
         @dev Добавляем адрес, в список командных кошельков
-        @param newAddress - адрес нового командного кошелька
+        @param newAccounts - массив адресов новых кошельков
      */
-    function addTeamAddress(address newAddress) public onlyOwner isNotWork {
+    function addTeamAccounts(address[] newAccounts) public onlyOwner isNotWork {
         //Добавляем адрес нового аккаунта в список команды
-        teamWallets.addTeamAccount(newAddress);
+        teamWallets.addTeamAccounts(newAccounts);
+    }
+
+    /**
+        @dev Добавляем адрес, в список командных кошельков
+        @param newAccount - добавляемый командный адрес
+     */
+    function addTeamAccount(address newAccount) public onlyOwner isNotWork {
+        //Добавляем адрес нового аккаунта в список команды
+        teamWallets.addTeamAccount(newAccount);
     }
 
     /**
@@ -997,6 +1040,8 @@ contract GGPCoin is MintableToken {
         work = true;
         //Записываем, когда была запущена работа
         startTime = now;
+        //Вызываем ивент запуска работы
+        emit StartWorkEvent(startTime);
     }
 
     /**
@@ -1011,15 +1056,14 @@ contract GGPCoin is MintableToken {
      */
     function signAllowTransactions() public onlySigner isWork {
         //Если разрашение транзакций ждёт подписи
-        if(allowTransfersWaitSign == true) {
-            //Разрашаем транзакции
-            allowTransfer = true;
-            //Говорим, что подпись поставлена
-            allowTransfersWaitSign = false;
-        } else {
-            //Возвращаем ошибку
-            require(false);
-        }
+        require(allowTransfersWaitSign, "Allow transfer is not wait sign");
+
+        //Разрашаем транзакции
+        allowTransfer = true;
+        //Говорим, что подпись поставлена
+        allowTransfersWaitSign = false;
+        //Вызываем ивент разрешения транзакций
+        emit AllowTransactionsEvent();
     }
     
     /**
@@ -1039,13 +1083,12 @@ contract GGPCoin is MintableToken {
         //В случае чего, просто прибавлю к этому числу 
         // 60 * 60 * 24 * 5 = 432000 (количество секунд в 5 днях)
         uint waitTime = startTime - now;
-        if(waitTime >= 15552000) {
-            //Разрешаем командные транзакции
-            teamWallets.allowTeamTransfers();
-        } else {
-            //В противном случае выводим ошибку
-            require(false);
-        }
+        require(waitTime >= 15552000, "Time has not come yet");
+
+        //Разрешаем командные транзакции
+        teamWallets.allowTeamTransfers();
+        //ивент разрешения командных транзакций
+        emit AllowTeamTransactionsEvent();
     }
 }
 
@@ -1066,7 +1109,7 @@ contract MainSale is Ownable {
      */
     modifier onlyWithoutToken() {
         //Проверка того, что токена нету
-        require(token == address(0));
+        require(token == address(0), "Token has created");
         //Вызов основной функции
         _;
     }

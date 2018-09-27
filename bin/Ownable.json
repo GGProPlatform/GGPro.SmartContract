@@ -1,20 +1,20 @@
 {
-    "abi": "[{\"constant\":false,\"inputs\":[{\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"transferOwnership\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"}]",
-    "bytecode": "608060405234801561001057600080fd5b5060008054600160a060020a03191633179055610113806100326000396000f300608060405260043610603e5763ffffffff7c0100000000000000000000000000000000000000000000000000000000600035041663f2fde38b81146043575b600080fd5b348015604e57600080fd5b50606e73ffffffffffffffffffffffffffffffffffffffff600435166070565b005b60005473ffffffffffffffffffffffffffffffffffffffff163314609357600080fd5b73ffffffffffffffffffffffffffffffffffffffff81161560e4576000805473ffffffffffffffffffffffffffffffffffffffff191673ffffffffffffffffffffffffffffffffffffffff83161790555b505600a165627a7a72305820903028b211c3ca2a91e67916c17e36f5418ba73472ebcdb26f0f041d0f28d6b60029",
+    "abi": "[{\"constant\":false,\"inputs\":[{\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"transferOwnership\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"NewOwnerEvent\",\"type\":\"event\"}]",
+    "bytecode": "608060405234801561001057600080fd5b5060008054600160a060020a031916331790556101aa806100326000396000f3006080604052600436106100405763ffffffff7c0100000000000000000000000000000000000000000000000000000000600035041663f2fde38b8114610045575b600080fd5b34801561005157600080fd5b5061007373ffffffffffffffffffffffffffffffffffffffff60043516610075565b005b60005473ffffffffffffffffffffffffffffffffffffffff1633146100fb57604080517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152601360248201527f53656e646572206973206e6f74206f776e657200000000000000000000000000604482015290519081900360640190fd5b73ffffffffffffffffffffffffffffffffffffffff81161561017b576000805473ffffffffffffffffffffffffffffffffffffffff191673ffffffffffffffffffffffffffffffffffffffff838116919091178083556040519116917f290782371ca9aa6b495c2faf9420db4fa092c2259a5e8c8fbef2beeb1c7e262891a25b505600a165627a7a7230582090bcf83507228b70acce84b4d95e1f6801eea807819ed078a6c913c5c6faafce0029",
     "functionHashes": {
         "transferOwnership(address)": "f2fde38b"
     },
     "gasEstimates": {
         "creation": [
-            20397,
-            55000
+            20427,
+            85200
         ],
         "external": {
-            "transferOwnership(address)": 20628
+            "transferOwnership(address)": 21789
         },
         "internal": {
             "isOwner(address)": null
         }
     },
-    "runtimeBytecode": "608060405260043610603e5763ffffffff7c0100000000000000000000000000000000000000000000000000000000600035041663f2fde38b81146043575b600080fd5b348015604e57600080fd5b50606e73ffffffffffffffffffffffffffffffffffffffff600435166070565b005b60005473ffffffffffffffffffffffffffffffffffffffff163314609357600080fd5b73ffffffffffffffffffffffffffffffffffffffff81161560e4576000805473ffffffffffffffffffffffffffffffffffffffff191673ffffffffffffffffffffffffffffffffffffffff83161790555b505600a165627a7a72305820903028b211c3ca2a91e67916c17e36f5418ba73472ebcdb26f0f041d0f28d6b60029"
+    "runtimeBytecode": "6080604052600436106100405763ffffffff7c0100000000000000000000000000000000000000000000000000000000600035041663f2fde38b8114610045575b600080fd5b34801561005157600080fd5b5061007373ffffffffffffffffffffffffffffffffffffffff60043516610075565b005b60005473ffffffffffffffffffffffffffffffffffffffff1633146100fb57604080517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152601360248201527f53656e646572206973206e6f74206f776e657200000000000000000000000000604482015290519081900360640190fd5b73ffffffffffffffffffffffffffffffffffffffff81161561017b576000805473ffffffffffffffffffffffffffffffffffffffff191673ffffffffffffffffffffffffffffffffffffffff838116919091178083556040519116917f290782371ca9aa6b495c2faf9420db4fa092c2259a5e8c8fbef2beeb1c7e262891a25b505600a165627a7a7230582090bcf83507228b70acce84b4d95e1f6801eea807819ed078a6c913c5c6faafce0029"
 }
