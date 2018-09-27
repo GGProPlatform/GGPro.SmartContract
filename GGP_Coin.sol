@@ -5,28 +5,6 @@ pragma solidity ^0.4.24;
  * @dev Математические операции, с проверками безопасности
  */
 library SafeMath {
-
-    /**
-        @dev Операция безопасного умножения
-     */
-    function mul(uint a, uint b) internal pure returns (uint) {
-        uint c = a * b;
-        // Вызывает исключение, если C делённое на A не равно B,
-        // там ещё проверка деления на ноль сразу же
-        assert(a == 0 || c / a == b);
-        return c;
-    }
-
-    /**
-        @dev Операция безопасного деления
-     */
-    function div(uint a, uint b) internal pure returns (uint) {
-        // assert(b > 0); // В новой версии это исключение вызывается автоматом
-        uint c = a / b;
-        // assert(a == b * c + a % b); // Нет случаев, когда это исключение выполнится
-        return c;
-    }
-
     /**
         @dev Операция безопасного вычитания
      */
@@ -45,34 +23,6 @@ library SafeMath {
         //Короче говоря, проверка того, что B не был отрицательным О_о.
         assert(c >= a);
         return c;
-    }
-
-    /**
-        @dev Операция безопасной проверки какое число больше (64 бита)
-     */
-    function max64(uint64 a, uint64 b) internal pure returns (uint64) {
-        return a >= b ? a : b;
-    }
-
-    /**
-        @dev Операция безопасной проверки какое число меньше (64 бита)
-     */
-    function min64(uint64 a, uint64 b) internal pure returns (uint64) {
-        return a < b ? a : b;
-    }
-
-    /**
-        @dev Операция безопасной проверки какое число больше  (256 бит)
-     */
-    function max256(uint256 a, uint256 b) internal pure returns (uint256) {
-        return a >= b ? a : b;
-    }
-
-    /**
-        @dev Операция безопасной проверки какое число больше (256 бит)
-     */
-    function min256(uint256 a, uint256 b) internal pure returns (uint256) {
-        return a < b ? a : b;
     }
 }
 
@@ -144,7 +94,7 @@ contract Signatory is Ownable {
     //Адрес подписывателя
     address private signer;
     
-    //Событие, которое вызывается при 
+    //Событие, которое вызывается при смене подписывателя
     event NewSignerEvent(address indexed newOwner);
 
     /**
@@ -244,7 +194,7 @@ contract Team is Ownable {
     */
     function addTeamAccounts(address[] newAccounts) public onlyOwner {        
         //Вываливаем ошибку, если количество аккаунтов некорректно
-        require(newAccounts.length != 10, "Need 10 accounts in array");
+        require(newAccounts.length == 10, "Need 10 accounts in array");
         //Проходимся по массиву аккаунтов
         for(uint256 i = 0; i < 10; i++) {
             //Добавляем аккаунты
@@ -253,7 +203,17 @@ contract Team is Ownable {
         //Вызываем ивент обновления списка командных аккаунтов
         emit SetTeamWalletsEvent(newAccounts);
     }
-    
+
+    /**
+        @dev Сбрасываем список командных аккаунтов. 
+        Добавлено на случай ошибки
+    */
+    function clearTeamAccounts() public onlyOwner {         
+        //Инициализируем массив адресов на 10 позиций
+        teamAccountsArray = new address[] (10);
+        //Инициализируем количество командных кошельков
+        teamSetCount = 0;
+    }
 
     /**
         @dev проверка того, что указанный аккаунт относится к командным
@@ -814,16 +774,19 @@ contract MintableToken is StandardToken, Ownable, Signatory, RefundTokens {
         @param _to - получатель токенов
      */
     function sentTeamTokens(address _to) private onlyOwner isNotWork {
-        //Снимаем с кошельков нужную сумму. На остаток даже
-        // не смотрим - отправка токенов команде идёт в самом начале, 
-        //и затронет только 4 из 20 кошельков. Таким образом, тут
-        //остаток всегда будет равено нолю
-        removeTokens(teamWalletTokens);
-        //Прибавляем к балансу получателя сумму платежа
-        balances[_to] = balances[_to].add(teamWalletTokens);
-        
-        // Вызываем ивент отправки средств
-        emit Transfer(address(this), _to, teamWalletTokens);
+        //Просто проверка на то, что адрес аккаунта задан
+        if(_to != address(0)) {
+            //Снимаем с кошельков нужную сумму. На остаток даже
+            // не смотрим - отправка токенов команде идёт в самом начале, 
+            //и затронет только 4 из 20 кошельков. Таким образом, тут
+            //остаток всегда будет равено нолю
+            removeTokens(teamWalletTokens);
+            //Прибавляем к балансу получателя сумму платежа
+            balances[_to] = balances[_to].add(teamWalletTokens);
+            
+            // Вызываем ивент отправки средств
+            emit Transfer(address(this), _to, teamWalletTokens);
+        }
     }
 
     /**
@@ -900,7 +863,7 @@ contract GGPCoin is MintableToken {
     //Флаг, показывающий, что трансферы разрешены
     bool private allowTransfer;
     //Название токена
-    string public name = "GGPro Coin";
+    string public name = "GGP Token";
     //Символ токена
     string public symbol = "GGP";
     //Дробность (количество знаков, после запятой).
@@ -1016,6 +979,14 @@ contract GGPCoin is MintableToken {
     }
 
     /**
+        @dev Сбрасываем список командных аккаунтов в случае ошибки
+     */
+    function clearTeamAccounts() public onlyOwner isNotWork {
+        //Очищаем список аккаунтов команды
+        teamWallets.clearTeamAccounts();
+    }
+
+    /**
         @dev Добавляем адрес, в список командных кошельков
         @param newAccount - добавляемый командный адрес
      */
@@ -1090,39 +1061,4 @@ contract GGPCoin is MintableToken {
         //ивент разрешения командных транзакций
         emit AllowTeamTransactionsEvent();
     }
-}
-
-
-
-/**
-    @title MainSale 
-    @dev Основной контракт
- */
-contract MainSale is Ownable {
-    //Экземпляр контракта токена
-    GGPCoin public token;
-
-    
-    /**
-        @dev модификатор, позволяющий запускать функции 
-        только до того как токен будет создан
-     */
-    modifier onlyWithoutToken() {
-        //Проверка того, что токена нету
-        require(token == address(0), "Token has created");
-        //Вызов основной функции
-        _;
-    }
-
-    
-
-    /**
-        @dev Инициализацйия токена
-     */
-    function initToken() public onlyOwner onlyWithoutToken {
-        //Инициализируем токен
-        token = new GGPCoin();
-        //Передаём управление токеном владельцу данного контракта
-        token.transferOwnership(msg.sender);
-    }    
 }
