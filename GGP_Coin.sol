@@ -138,120 +138,6 @@ contract Signatory is Ownable {
     }
 }
 
-/**
-    @dev Библиотека, реализующая хренение адресов команды
-    для того, чтобы перевести на них токены по старту
-    и заблокировать их на 6 месяцев
- */
-contract Team is Ownable {
-    //Адреса кошельков команды, для проверки - является
-    //ли указанный кошель командным
-    mapping(address => uint) private teamAccounts;
-    //Адреса кошельков команды, в виде массива, для 
-    //перевода на них средств
-    address[] private teamAccountsArray;
-    //Количество заполненных кошельков команды 
-    uint private teamSetCount;
-    //Флаг разрешающий переводы, для команды 
-    bool private allowTeamTransfer;
-
-    //Событие, которое вызывается при приявзке кошельков команды
-    event SetTeamWalletsEvent(address[] teamWallets);
-
-    /**
-        @dev Конструктор контракта. При инициализации контракта,
-        прописывает нулевой адрес, как адрес подписывателя
-     */
-    constructor() public {
-        //Инициализируем массив адресов на 10 позиций
-        teamAccountsArray = new address[] (10);
-        //Запрещаем переводы токенов, с командных счетов
-        allowTeamTransfer = false;
-        //Инициализируем количество командных кошельков
-        teamSetCount = 0;
-    }
-
-    /**
-        @dev Функция, позволяющая добавлять нового члена команды
-        @param newAccount - адрес нового кошелька
-     */
-    function addTeamAccount(address newAccount) public onlyOwner {
-        //Если переданный адрес существует, не находится в нашем списке
-        //и количество членов команды меньше 10
-        require((newAccount != address(0)) && !isTeam(newAccount) && (teamSetCount < 10), "Error add team account");
-
-        //Записываем в общий список кошелёк
-        teamAccounts[newAccount] = 31337;
-        //Записываем адрес кошелька в массив
-        teamAccountsArray[teamSetCount] = newAccount;      
-        //Увеличиваем счётчик количества командных аккаунтов
-        teamSetCount++;      
-    }
-
-    /**
-        @dev Функция добавляющая массив командных кошельков
-        @param newAccounts - массив адресов новых кошельков
-    */
-    function addTeamAccounts(address[] newAccounts) public onlyOwner {        
-        //Вываливаем ошибку, если количество аккаунтов некорректно
-        require(newAccounts.length == 10, "Need 10 accounts in array");
-        //Проходимся по массиву аккаунтов
-        for(uint256 i = 0; i < 10; i++) {
-            //Добавляем аккаунты
-            addTeamAccount(newAccounts[i]);
-        }
-        //Вызываем ивент обновления списка командных аккаунтов
-        emit SetTeamWalletsEvent(newAccounts);
-    }
-
-    /**
-        @dev Сбрасываем список командных аккаунтов. 
-        Добавлено на случай ошибки
-    */
-    function clearTeamAccounts() public onlyOwner {         
-        //Инициализируем массив адресов на 10 позиций
-        teamAccountsArray = new address[] (10);
-        //Инициализируем количество командных кошельков
-        teamSetCount = 0;
-    }
-
-    /**
-        @dev проверка того, что указанный аккаунт относится к командным
-        @param account - адрес проверяемого кошелька
-     */
-    function isTeam(address account) internal view returns(bool) {   
-        //Если данный кошелёк принаждлежит команде    
-        return (teamAccounts[account] == 31337);
-    }
-
-    /**
-        @dev проверка того, что с данного адреса можно перевести токены
-        @param account - адрес проверяемого кошелька
-     */
-    function isTeamAllow(address account) public view returns(bool) {
-        //Если адрес аккаунта есть в списке командных, 
-        //то возвращаем инфу о том, можно ли переводить 
-        //с командных аккаунтов. В противном случае -
-        //просто разрешаем.
-        return (isTeam(account)) ? allowTeamTransfer : true;
-    }
-
-    /**
-        @dev Разрешает проведение переводов, от имени команды
-     */
-    function allowTeamTransfers() public onlyOwner {
-        //Разрешаем переводы токенов, с командных счетов
-        allowTeamTransfer = false;
-    }
-
-    /**
-        @dev Возвращает массив кошельков команды
-     */
-    function getTeamAccounts() public view returns(address[]) {
-        return teamAccountsArray;
-    }
-}
-
 
 /**
     @dev Контракт, реализующий возврат токенов.
@@ -350,7 +236,7 @@ contract RefundTokens is Ownable {
         @param _sender - адрес пользователя, для которого необходимо вернуть инфомрацию
         @return список возвратов
      */
-    function getRefundsInfo(address _sender) internal view onlyOwner returns(RefundInfo[]) {
+    function getRefundsInfo(address _sender) internal view returns(RefundInfo[]) {
         return refundList[_sender];
     }
 
@@ -358,7 +244,7 @@ contract RefundTokens is Ownable {
         @dev Очищает список возвратов пользователя
         @param _sender - адрес пользователя, для которого необходимо очистить список
      */
-    function clearRefunds(address _sender) internal onlyOwner {
+    function clearRefunds(address _sender) internal {
         //Реинициализируем массив информации о возвратах в пустой
         refundList[_sender].length = 0;
     }
@@ -562,7 +448,7 @@ contract StandardToken is BasicToken, ERC20 {
 /**
     @dev контракт, реализующий кошелёк контракта, на котором хранятся токены
  */
-contract TokensWallet is Ownable {
+contract TokensWallet {
     //Баланс данного кошелька
     uint private balance;
 
@@ -574,7 +460,7 @@ contract TokensWallet is Ownable {
         с фиксированной суммой.
 		@param _balance - общее количество токенов, которое нужно создать
      */
-    constructor(uint _balance) public {
+    function initWallet(uint _balance) internal {
         //Инициализация кошелька нужной суммой
         balance = _balance;
         //Вызываем ивент обновления баланса
@@ -586,7 +472,7 @@ contract TokensWallet is Ownable {
         @param cost - сумма, которую возвращаем
         @return - часть суммы, на которую не хватило максимальной вместимости кошелька
      */
-    function setMoney(uint cost) public onlyOwner {
+    function setMoney(uint cost) internal {
         //Кладём сумму на кошелёк
         balance += cost;
     }
@@ -596,7 +482,7 @@ contract TokensWallet is Ownable {
         @param cost - сумма, которую снимаем с кошелька
         @return - часть суммы, на которую не хватило баланса кошелька
      */
-    function getMoney(uint cost) public onlyOwner returns(uint) {
+    function getMoney(uint cost) internal returns(uint) {
         uint remainder;
         
         //Если сумма платежа меньше баланса кошелька 
@@ -631,7 +517,7 @@ contract TokensWallet is Ownable {
  * @title Mintable token
  * @dev Разширение базового токена
  */
-contract MintableToken is StandardToken, Ownable, Signatory, RefundTokens {
+contract MintableToken is StandardToken, Ownable, Signatory, RefundTokens, TokensWallet {
     
     /**
         @dev Структура, хранящая информацию о транзакции
@@ -655,9 +541,6 @@ contract MintableToken is StandardToken, Ownable, Signatory, RefundTokens {
     uint private teamWalletTokens;
     //Флаг, показывающий, что работа смартконтракта была запущена
     bool public work;
-
-    //Кошель, на котором хранится запас уже напечатанных токенов
-    TokensWallet private wallet;
    
     //Событие, которое вызывается при раздаче токенов команде
     event DistrubToTeamEvent();
@@ -691,11 +574,12 @@ contract MintableToken is StandardToken, Ownable, Signatory, RefundTokens {
         require(isOwner(msg.sender) || isSigner(msg.sender), "Sender is not owner or signer");
         _;
     }
+
     /**
         @dev Конструктор контракта, ответственного 
         за количество напечатанных токенов
      */
-    constructor() public {
+    function initMintableToken() internal onlyOwner isNotWork {
         //Указываем, что смартконтракт ещё не был запущен
         work = false;
         //Указываем, что раздача токенов команде разрешена
@@ -704,8 +588,6 @@ contract MintableToken is StandardToken, Ownable, Signatory, RefundTokens {
         //будут участвовать в обороте
         //добавить 5 нолей, т.к. у нас пять знаков после запятой
         totalSupply = 10000000000000;
-        //Инициализируем внутренний кошелёк с токенами
-        wallet = new TokensWallet(totalSupply);
         //Указываем, сколько токенов пойдёт на один
         //командный адрес. Команде отходит 20% 
         //от общего количества токенов. 
@@ -713,15 +595,9 @@ contract MintableToken is StandardToken, Ownable, Signatory, RefundTokens {
         //на один командный адрес пойдёт: 
         //(100`000`000 * 0,2) / 20 = 1 000 000 токенов        
         teamWalletTokens = 100000000000;
+        //Инициализируем внутренний кошелёк с токенами
+        initWallet(totalSupply);
     }    
-
-	/**
-		@dev возвращаем сумму баланса кошелька
-        @return - Сумма блаанса на кошкльке		
-	*/
-    function getWalletBalance() public view returns(uint) {
-        return wallet.getWalletBalance();
-    }
 
     /**
         @dev Снимаем указанную сумму, с кошельков
@@ -734,7 +610,7 @@ contract MintableToken is StandardToken, Ownable, Signatory, RefundTokens {
         
         //Снимаем сумму с кошелька, и получаем неснятую 
         //часть суммы (если на кошельке не хватило средств)
-        remainder = wallet.getMoney(remainder);
+        remainder = getMoney(remainder);
 
         //Если на кошельках не хватило средств, остаток мы 
         //вернём, в виде возвращаемого значения
@@ -747,14 +623,14 @@ contract MintableToken is StandardToken, Ownable, Signatory, RefundTokens {
      */
     function returnTokens(uint cost) internal onlyOwner isWork {
         //Отправляем бабки на кошелёк
-        wallet.setMoney(cost);
+        setMoney(cost);
     }
 
     /**
         @dev Раздаём токены команде
         @param teamAccounts - массив аккаунтов, принадлежащих команде
      */
-    function setTeamTokens(address[] teamAccounts) internal onlyOwner isNotWork {
+    function setTeamTokens(address[] teamAccounts) internal {
         //Если раздача токенов команде разрешена
         require(teamFlag, "Distribution team tokens is not allow");        
 
@@ -854,41 +730,148 @@ contract MintableToken is StandardToken, Ownable, Signatory, RefundTokens {
 
 
 /**
-    @dev Основной контракт токенов
+    @dev Контракт реализующий хранение командных кошельков
  */
-contract GGPCoin is MintableToken {
-    //Список командных кошельков
-    Team private teamWallets;
+contract TeamWallets {
+    //Адреса кошельков команды, для проверки - является
+    //ли указанный кошель командным
+    mapping(address => uint) private teamAccounts;
+    //Адреса кошельков команды, в виде массива, для 
+    //перевода на них средств
+    address[] private teamAccountsArray;
+    //Количество заполненных кошельков команды 
+    uint private teamSetCount;
+    //Флаг разрешающий переводы, для команды 
+    bool private allowTeamTransfer;
 
-    //Флаг, показывающий, что трансферы разрешены
-    bool private allowTransfer;
-    //Название токена
-    string public name = "GGP Token";
-    //Символ токена
-    string public symbol = "GGP";
-    //Дробность (количество знаков, после запятой).
-    uint public decimals = 5;
-    //Время запуска основной фазы работы смартконтракта
-    uint public startTime;
+    //Событие, которое вызывается при приявзке кошельков команды
+    event SetTeamWalletsEvent(address[] teamWallets);
+
+    /**
+        @dev Конструктор контракта. При инициализации контракта,
+        прописывает нулевой адрес, как адрес подписывателя
+     */
+    function initTeam() internal {
+        //Инициализируем массив адресов на 10 позиций
+        teamAccountsArray = new address[] (10);
+        //Запрещаем переводы токенов, с командных счетов
+        allowTeamTransfer = false;
+        //Инициализируем количество командных кошельков
+        teamSetCount = 0;
+    }
+
+    /**
+        @dev Функция, позволяющая добавлять нового члена команды
+        @param newAccount - адрес нового кошелька
+     */
+    function addTeamAccount(address newAccount) private {
+        //Если переданный адрес существует, не находится в нашем списке
+        //и количество членов команды меньше 10
+        require((newAccount != address(0)) && !isTeam(newAccount) && (teamSetCount < 10), "Error add team account");
+
+        //Записываем в общий список кошелёк
+        teamAccounts[newAccount] = 31337;
+        //Записываем адрес кошелька в массив
+        teamAccountsArray[teamSetCount] = newAccount;      
+        //Увеличиваем счётчик количества командных аккаунтов
+        teamSetCount++;      
+    }
+
+    /**
+        @dev Функция добавляющая массив командных кошельков
+        @param newAccounts - массив адресов новых кошельков
+    */
+    function addTeamAccounts(address[] newAccounts) internal {    
+        //Вываливаем ошибку, если количество аккаунтов некорректно
+        require(newAccounts.length == 10, "Need 10 accounts in array");
+        //Проходимся по массиву аккаунтов
+        for(uint256 i = 0; i < 10; i++) {
+            //Добавляем аккаунты
+            addTeamAccount(newAccounts[i]);
+        }
+        //Вызываем ивент обновления списка командных аккаунтов
+        emit SetTeamWalletsEvent(newAccounts);
+    }
+
+    /**
+        @dev Сбрасываем список командных аккаунтов. 
+        Добавлено на случай ошибки
+    */
+    function clearTeamAccounts() internal {         
+        //Инициализируем массив адресов на 10 позиций
+        teamAccountsArray = new address[] (10);
+        //Инициализируем количество командных кошельков
+        teamSetCount = 0;
+    }
+
+    /**
+        @dev проверка того, что указанный аккаунт относится к командным
+        @param account - адрес проверяемого кошелька
+     */
+    function isTeam(address account) internal view returns(bool) {   
+        //Если данный кошелёк принаждлежит команде    
+        return (teamAccounts[account] == 31337);
+    }
+
+    /**
+        @dev проверка того, что с данного адреса можно перевести токены
+        @param account - адрес проверяемого кошелька
+     */
+    function isTeamAllow(address account) internal view returns(bool) {
+        //Если адрес аккаунта есть в списке командных, 
+        //то возвращаем инфу о том, можно ли переводить 
+        //с командных аккаунтов. В противном случае -
+        //просто разрешаем.
+        return (isTeam(account)) ? allowTeamTransfer : true;
+    }
+
+    /**
+        @dev Разрешает проведение переводов, от имени команды
+     */
+    function allowTeamTransfers() internal {
+        //Разрешаем переводы токенов, с командных счетов
+        allowTeamTransfer = true;
+    }
+
+    /**
+        @dev Возвращает массив кошельков команды
+     */
+    function getTeamAccounts() public view returns(address[]) {
+        return teamAccountsArray;
+    }
+}
+
+
+/**
+    @dev Контракт с некоторыми дополнительными функциями 
+ */
+contract WorkToken is TeamWallets, MintableToken {
     //Флаг, показывающий, что разрешение на выполнение 
     //транзакций ждёт только подписи
     bool private allowTransfersWaitSign;
+    //Флаг, показывающий, что трансферы разрешены
+    bool private allowTransfer;
+    //Время запуска основной фазы работы смартконтракта
+    uint public startTime;
 
-
-    //Событие, которое вызывается при запуске работы токена
-    event StartWorkEvent(uint startTime);
-    //Событие, которое вызывается при разрешении транзакций
-    event AllowTransactionsEvent();
     //Событие, которое вызывается при разрешении транзакций
     //для командных аккаунтов
     event AllowTeamTransactionsEvent();
+    //Событие, которое вызывается при разрешении транзакций
+    event AllowTransactionsEvent();
+    //Событие, которое вызывается при запуске работы токена
+    event StartWorkEvent(uint startTime);
 
+
+    
     /**
         @dev Конструктор основного контракта токена
      */
-    constructor() public {
-        //инициализируем контракт команды
-        teamWallets = new Team();
+    function initToken() public onlyOwner isNotWork {
+        //Инициализируем команду
+        initTeam(); 
+        //Инициализируем токен
+        initMintableToken();
         //Указываем, что по дефолту транзакции отключены
         allowTransfer = false;
         //Указываем, что распоряжения, на активацию 
@@ -897,6 +880,87 @@ contract GGPCoin is MintableToken {
     }    
 
 
+    /**
+        @dev Активируем флаг ожидания подписи, на активацию транзакций
+     */
+    function allowTransactions() public onlyOwner isWork {
+        allowTransfersWaitSign = true;
+    }
+
+    /**
+        @dev Подписываем разрешение, на активацию транзакций
+     */
+    function signAllowTransactions() public onlySigner isWork {
+        //Если разрашение транзакций ждёт подписи
+        require(allowTransfersWaitSign, "Allow transfer is not wait sign");
+
+        //Разрашаем транзакции
+        allowTransfer = true;
+        //Говорим, что подпись поставлена
+        allowTransfersWaitSign = false;
+        //Вызываем ивент разрешения транзакций
+        emit AllowTransactionsEvent();
+    }
+    
+    /**
+        @dev проверяем, разрешён ли перевод, для данного адреса
+     */
+    function isAllowTransfer(address sender) internal view returns (bool) {
+        //Если разрешён перевод токенов в общем и целом, 
+        //И, если аккаунт отправителя является командным - 
+        //проверяем разрешение на перевод и у него.
+        return (allowTransfer && isTeamAllow(sender));
+    } 
+    
+    /**
+        @dev Активируем транзакции, для командных кошельков
+     */
+    function allowTeamTransactions() public onlyOwner isWork {
+        //Проверяем время, прошедшее с момента запуска 
+        //работы. Ожидание - 6 месяцев. Для автоматизации
+        //этого процесса, всё реализовано специфично. 
+        //При запуске работы запоминается время блока, в
+        //формате метки времени, а для проверки берётся 
+        //разница между текущим временем, и временем старта,  
+        //и сравнивается с 6 * 30 * 24 * 60 * 60 = 15552000
+        //(6 месяцев в секундах). Понятно, что длинна месяца 
+        //разная, но погрешность в 4-5 дней я считаю не особо
+        // существенной, для такого промежутка времени.
+        //В случае чего, просто прибавлю к этому числу 
+        // 60 * 60 * 24 * 5 = 432000 (количество секунд в 5 днях)
+        uint waitTime = now - startTime;
+        require(waitTime >= 15552000, "Time has not come yet");
+
+        //Разрешаем командные транзакции
+        allowTeamTransfers();
+        //ивент разрешения командных транзакций
+        emit AllowTeamTransactionsEvent();
+    }
+    
+    /**
+        @dev запуск работы смартконтракта
+     */
+    function startWork() public onlyOwner isNotWork {
+        //Запускаем работу
+        work = true;
+        //Записываем, когда была запущена работа
+        startTime = now;
+        //Вызываем ивент запуска работы
+        emit StartWorkEvent(startTime);
+    }
+}
+
+/**
+    @dev Основной контракт токенов
+ */
+contract GGPCoin is WorkToken {
+    //Название токена
+    string public name = "GGP Token";
+    //Символ токена
+    string public symbol = "GGP";
+    //Дробность (количество знаков, после запятой).
+    uint public decimals = 5;
+    
     /**
         @dev Очищает список возвратов пользователя
         @param _sender - адрес пользователя, для которого необходимо очистить список
@@ -958,107 +1022,29 @@ contract GGPCoin is MintableToken {
         } 
     }    
 
-    
-    /**
-        @dev проверяем, разрешён ли перевод, для данного адреса
-     */
-    function isAllowTransfer(address sender) internal view returns (bool) {
-        //Если разрешён перевод токенов в общем и целом, 
-        //И, если аккаунт отправителя является командным - 
-        //проверяем разрешение на перевод и у него.
-        return (allowTransfer && teamWallets.isTeamAllow(sender));
-    } 
-
     /**
         @dev Добавляем адрес, в список командных кошельков
-        @param newAccounts - массив адресов новых кошельков
+        @param newWallets - массив адресов новых кошельков
      */
-    function addTeamAccounts(address[] newAccounts) public onlyOwner isNotWork {
+    function addTeamWallets(address[] newWallets) public onlyOwner isNotWork {
         //Добавляем адрес нового аккаунта в список команды
-        teamWallets.addTeamAccounts(newAccounts);
+        addTeamAccounts(newWallets);
     }
 
     /**
         @dev Сбрасываем список командных аккаунтов в случае ошибки
      */
-    function clearTeamAccounts() public onlyOwner isNotWork {
+    function clearTeamWallets() public onlyOwner isNotWork {
         //Очищаем список аккаунтов команды
-        teamWallets.clearTeamAccounts();
+        clearTeamAccounts();
     }
 
-    /**
-        @dev Добавляем адрес, в список командных кошельков
-        @param newAccount - добавляемый командный адрес
-     */
-    function addTeamAccount(address newAccount) public onlyOwner isNotWork {
-        //Добавляем адрес нового аккаунта в список команды
-        teamWallets.addTeamAccount(newAccount);
-    }
 
     /**
         @dev Переводим токены, на кошельки команды 
      */
     function sendTokensToTeam() public onlyOwner isNotWork {
         //Отправляем все кошельки команды, для перевода на них токенов
-        setTeamTokens(teamWallets.getTeamAccounts());
-    }
-    
-    /**
-        @dev запуск работы смартконтракта
-     */
-    function startWork() public onlyOwner isNotWork {
-        //Запускаем работу
-        work = true;
-        //Записываем, когда была запущена работа
-        startTime = now;
-        //Вызываем ивент запуска работы
-        emit StartWorkEvent(startTime);
-    }
-
-    /**
-        @dev Активируем флаг ожидания подписи, на активацию транзакций
-     */
-    function allowTransactions() public onlyOwner isWork {
-        allowTransfersWaitSign = true;
-    }
-
-    /**
-        @dev Подписываем разрешение, на активацию транзакций
-     */
-    function signAllowTransactions() public onlySigner isWork {
-        //Если разрашение транзакций ждёт подписи
-        require(allowTransfersWaitSign, "Allow transfer is not wait sign");
-
-        //Разрашаем транзакции
-        allowTransfer = true;
-        //Говорим, что подпись поставлена
-        allowTransfersWaitSign = false;
-        //Вызываем ивент разрешения транзакций
-        emit AllowTransactionsEvent();
-    }
-    
-    /**
-        @dev Активируем транзакции, для командных кошельков
-     */
-    function allowTeamTransactions() public onlyOwner isWork {
-        //Проверяем время, прошедшее с момента запуска 
-        //работы. Ожидание - 6 месяцев. Для автоматизации
-        //этого процесса, всё реализовано специфично. 
-        //При запуске работы запоминается время блока, в
-        //формате метки времени, а для проверки берётся 
-        //разница между текущим временем, и временем старта,  
-        //и сравнивается с 6 * 30 * 24 * 60 * 60 = 15552000
-        //(6 месяцев в секундах). Понятно, что длинна месяца 
-        //разная, но погрешность в 4-5 дней я считаю не особо
-        // существенной, для такого промежутка времени.
-        //В случае чего, просто прибавлю к этому числу 
-        // 60 * 60 * 24 * 5 = 432000 (количество секунд в 5 днях)
-        uint waitTime = startTime - now;
-        require(waitTime >= 15552000, "Time has not come yet");
-
-        //Разрешаем командные транзакции
-        teamWallets.allowTeamTransfers();
-        //ивент разрешения командных транзакций
-        emit AllowTeamTransactionsEvent();
+        setTeamTokens(getTeamAccounts());
     }
 }

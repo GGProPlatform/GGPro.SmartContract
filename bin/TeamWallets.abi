@@ -1,0 +1,1 @@
+[{"constant":true,"inputs":[],"name":"getTeamAccounts","outputs":[{"name":"","type":"address[]"}],"payable":false,"stateMutability":"view","type":"function"},{"anonymous":false,"inputs":[{"indexed":false,"name":"teamWallets","type":"address[]"}],"name":"SetTeamWalletsEvent","type":"event"}]
